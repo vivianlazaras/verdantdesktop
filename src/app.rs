@@ -1,9 +1,10 @@
 use keycast::discovery::{Beacon, Discovery, ServiceIdent, WaitFor}; // replace with your crate name
 
+use verdant::services::*;
 use crate::{
     pages::*,
     service::{AsyncCmd, LkService, UiCmd},
-    services::*,
+    
     video_grid::VideoGrid,
     video_renderer::VideoRenderer,
 };

@@ -10,7 +10,7 @@ pub use rooms::*;
 pub use settings::*;
 
 use crate::service::{LkService, UiCmd};
-use crate::services::{VerdantCmd, VerdantService, VerdantUiCmd};
+use verdant::services::{VerdantCmd, VerdantService, VerdantUiCmd};
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Serialize, Deserialize)]

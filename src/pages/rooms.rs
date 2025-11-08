@@ -7,7 +7,7 @@ use crate::{
 use egui::{CornerRadius, Stroke};
 use keycast::discovery::Discovery;
 use livekit::{e2ee::EncryptionType, prelude::*, track::VideoQuality, SimulateScenario};
-use protocol::verdant::TokenResponse;
+use verdant::livekit::TokenResponse;
 use std::collections::HashMap;
 use tokio::runtime::Handle;
 

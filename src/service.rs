@@ -153,9 +153,10 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
                         sine_track: SineTrack::new(new_room.clone(), SineParameters::default()),
                     });
 
+                    println!("joined room: {}", new_room.name());
+                    
                     // Allow direct access to the room from the UI (Used for sync access)
                     inner.room.lock().replace(new_room);
-
                     let _ = inner.ui_tx.send(UiCmd::ConnectResult { result: Ok(()) });
                 } else if let Err(err) = res {
                     log::error!("failed to connect to room: {:?}", err);
@@ -179,7 +180,7 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
             }
             AsyncCmd::PublishCamera => {
                 if let Some(state) = running_state.as_mut() {
-                    publish_camera(handle.clone(), &state.room).await.unwrap()
+                    publish_camera(handle.clone(), &state.room.clone()).await.unwrap()
                 }
             }
             AsyncCmd::ToggleLogo => {
@@ -250,9 +251,9 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
     }
 }
 
-async fn publish_camera(handle: Handle, room: &Room) -> Result<(), Box<dyn std::error::Error>> {
+async fn publish_camera(handle: Handle, room: &Arc<Room>) -> Result<(), Box<dyn std::error::Error>> {
     let nokhwa = NokhwaSource::default();
-    let (local_track, handle) = create_local_track(nokhwa, handle).await.unwrap();
+    let (local_track, handle) = create_local_track(nokhwa, handle, room.clone()).await.unwrap();
 
     // Publish it to the room
     room.local_participant()

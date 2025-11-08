@@ -1,4 +1,5 @@
 pub mod nokhwa;
+pub mod pipewire;
 
 use ::nokhwa::NokhwaError;
 use async_trait::async_trait;
@@ -9,6 +10,7 @@ use livekit::webrtc::video_frame::VideoBuffer;
 use livekit::webrtc::video_source::native::NativeVideoSource;
 use livekit::webrtc::video_source::RtcVideoSource;
 use livekit::webrtc::video_source::VideoResolution;
+use livekit::{Room, ConnectionState};
 use std::sync::Arc;
 use tokio::runtime::Handle;
 use tokio::task;
@@ -24,6 +26,8 @@ pub enum VideoError {
     EmptySource,
     #[error("failed to convert to YUV: {0}")]
     YUVError(#[from] yuv::YuvError),
+    #[error("invalid frame")]
+    InvalidFrame,
 }
 
 /// Trait for any object that can produce video frames.
@@ -86,6 +90,7 @@ pub trait VideoSource: Send + Sync {
 pub(crate) async fn create_local_track<V: VideoSource + 'static>(
     mut camera: V,
     handle: Handle,
+    room: Arc<Room>,
 ) -> Result<(LocalVideoTrack, JoinHandle<()>), VideoError> {
     let (track, source) = camera.create_local_track();
     let join = handle.spawn(async move {
@@ -99,7 +104,9 @@ pub(crate) async fn create_local_track<V: VideoSource + 'static>(
                 println!("Task cancelled!");
                 break;
             }*/
-
+            if room.connection_state() == ConnectionState::Disconnected {
+                break;
+            }
             source.capture_frame(&frame);
         }
     });

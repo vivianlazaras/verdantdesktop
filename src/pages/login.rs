@@ -1,5 +1,5 @@
-use crate::services::{VerdantCmd, VerdantService, VerdantUiCmd};
-use protocol::auth::LoginResult;
+use verdant::services::{VerdantCmd, VerdantService, VerdantUiCmd};
+use verdant::auth::LoginResult;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 

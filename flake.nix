@@ -32,16 +32,18 @@
             pkg-config
           ];
 
+          
+
           buildInputs = with pkgs; [
             openssl
             libnice
             libffi
-            glib
             livekit-libwebrtc
             libva
             wayland
             libxkbcommon
             pkgs.linuxHeaders
+            libgcc
           ];
 
           # Some crates use system SSL paths or need environment hints
@@ -52,23 +54,25 @@
             pkgs.openssl
             pkgs.libva
             pkgs.libclang
-            pkgs.libclang.devShells
             pkgs.libv4l.dev
             pkgs.linuxHeaders
+            pkgs.pipewire.dev
+
           ];
         };
 
         devShells.default = pkgs.mkShell {
+          pure = true;
+
           buildInputs = with pkgs; [
             cargo
+            pipewire.dev
             rustc
             pkg-config
             openssl
             livekit-libwebrtc
             libva
             libnice
-            glib
-            clang
             libxkbcommon
             wayland
             libclang
@@ -76,25 +80,37 @@
             vulkan-validation-layers
             vulkan-tools
             xorg.libX11
-            xorg.libXcursor
-            xorg.libXi
-            xorg.libXrandr
-            xorg.libXext
-            xorg.libXinerama
-            xorg.libXrender
             libv4l.dev
             libv4l
             linuxHeaders
-            glibc.dev
+            libgcc
           ];
-
+          shellHook = ''
+            # unset PATH
+            echo "PATH has been unset."
+            # export PATH="${pkgs.libgcc.out}/bin:${pkgs.coreutils}/bin:${pkgs.rustup}/bin:${pkgs.llvmPackages.clangUseLLVM}/bin:${pkgs.pkg-config}/bin"
+          '';
+          CC = "gcc";
           VULKAN_DIR = "${pkgs.vulkan-loader}";
           LIBV4L = "${pkgs.libv4l.dev}";
           WAYLAND_DIR= "${pkgs.wayland}";
-          C_INCLUDE_PATH = "${pkgs.linuxHeaders}/include/:${pkgs.glibc.dev}/include/";
+          C_INCLUDE_PATH = "${pkgs.linuxHeaders}/include/:${pkgs.libgcc.out}/include:${pkgs.glibc.dev}/include";
+          CXX_INCLUDE_PATH = "${pkgs.libgcc.out}/include";
+          CXXFLAGS = "-I${pkgs.libgcc.out}/include";
+          CFLAGS = "-I${pkgs.libgcc.out}/include/c++/${pkgs.libgcc.version}/";
           LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.wayland}/lib:${pkgs.libxkbcommon}/lib/:${pkgs.vulkan-loader}/lib/:${pkgs.libva.out}/lib/:${pkgs.libclang.lib}/lib/";
           LIBCLANG_PATH = "${pkgs.libclang.lib}/lib/";
           RUST_BACKTRACE = "1";
+          PIPEWIRE = "${pkgs.pipewire.dev}";
+          PKG_CONFIG_PATH = pkgs.lib.makeSearchPath "lib/pkgconfig" [
+            pkgs.openssl
+            pkgs.libva
+            pkgs.libclang
+            pkgs.libv4l.dev
+            pkgs.linuxHeaders
+            pkgs.pipewire.dev
+
+          ];
         };
       });
 }
