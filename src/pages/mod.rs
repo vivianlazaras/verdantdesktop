@@ -76,7 +76,9 @@ impl AppPage {
 
     pub fn event(&mut self, cmd: VerdantUiCmd) {
         match cmd {
-            VerdantUiCmd::LkToken(url, response) => {
+            VerdantUiCmd::LkToken(record) => {
+                let url = record.server;
+                let response = record.response;
                 self.room.initialize(&url, &response);
                 self.active = ActivePage::Room;
             }

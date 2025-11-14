@@ -4,17 +4,28 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; # or unstable if you prefer
     flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
+          overlays = [ rust-overlay.overlays.default ];
         };
 
         rustToolchain = pkgs.rustPlatform.rustcSrc;
-        rust = pkgs.rustPlatform;
+        rust = pkgs.rust-bin.stable.latest.default.override {
+          targets = [
+            "aarch64-linux-android"
+            "armv7-linux-androideabi"
+            "i686-linux-android"
+            "x86_64-linux-android"
+            "x86_64-pc-windows-msvc"
+            "x86_64-pc-windows-gnu"
+          ];
+        };
 
       in
       {
@@ -67,7 +78,8 @@
           buildInputs = with pkgs; [
             cargo
             pipewire.dev
-            rustc
+            rust
+            pkgs.pkgsCross.mingwW64.buildPackages.gcc
             pkg-config
             openssl
             livekit-libwebrtc

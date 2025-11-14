@@ -69,12 +69,9 @@ impl LoginPage {
         // Compose a readable label for the button.
         // You can customize what fields show up.
         let label = format!(
-            "{} ({}) - {}://{}:{}",
+            "{} \n {}",
             discovery.name,
-            discovery.host,
-            discovery.protocol,
-            discovery.addrs.get(0).map(|a| a.to_string()).unwrap_or_default(),
-            discovery.port
+            discovery.default_url().unwrap_or("unknown host".to_string())
         );
 
         // Make the entire row a button
