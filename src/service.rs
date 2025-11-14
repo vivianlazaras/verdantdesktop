@@ -11,12 +11,12 @@ use livekit::{
     webrtc::prelude::*,
     SimulateScenario,
 };
+use livekit_sources::create_local_track;
+use livekit_sources::nokhwa::NokhwaSource;
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tokio::sync::mpsc::{self, error::SendError};
-use crate::video::create_local_track;
-use crate::video::nokhwa::NokhwaSource;
 use tokio::runtime::Handle;
+use tokio::sync::mpsc::{self, error::SendError};
 
 #[derive(Debug)]
 pub enum AsyncCmd {
@@ -109,7 +109,11 @@ impl LkService {
     }
 }
 
-async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedReceiver<AsyncCmd>, handle: Handle) {
+async fn service_task(
+    inner: Arc<ServiceInner>,
+    mut cmd_rx: mpsc::UnboundedReceiver<AsyncCmd>,
+    handle: Handle,
+) {
     struct RunningState {
         room: Arc<Room>,
         logo_track: LogoTrack,
@@ -154,7 +158,7 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
                     });
 
                     println!("joined room: {}", new_room.name());
-                    
+
                     // Allow direct access to the room from the UI (Used for sync access)
                     inner.room.lock().replace(new_room);
                     let _ = inner.ui_tx.send(UiCmd::ConnectResult { result: Ok(()) });
@@ -180,7 +184,9 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
             }
             AsyncCmd::PublishCamera => {
                 if let Some(state) = running_state.as_mut() {
-                    publish_camera(handle.clone(), &state.room.clone()).await.unwrap()
+                    publish_camera(handle.clone(), &state.room.clone())
+                        .await
+                        .unwrap()
                 }
             }
             AsyncCmd::ToggleLogo => {
@@ -251,9 +257,14 @@ async fn service_task(inner: Arc<ServiceInner>, mut cmd_rx: mpsc::UnboundedRecei
     }
 }
 
-async fn publish_camera(handle: Handle, room: &Arc<Room>) -> Result<(), Box<dyn std::error::Error>> {
+async fn publish_camera(
+    handle: Handle,
+    room: &Arc<Room>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let nokhwa = NokhwaSource::default();
-    let (local_track, handle) = create_local_track(nokhwa, handle, room.clone()).await.unwrap();
+    let (local_track, handle) = create_local_track(nokhwa, handle, room.clone())
+        .await
+        .unwrap();
 
     // Publish it to the room
     room.local_participant()

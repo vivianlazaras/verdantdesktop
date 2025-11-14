@@ -1,16 +1,15 @@
 use keycast::discovery::{Beacon, Discovery, ServiceIdent, WaitFor}; // replace with your crate name
 
-use verdant::services::*;
 use crate::{
     pages::*,
     service::{AsyncCmd, LkService, UiCmd},
-    
     video_grid::VideoGrid,
     video_renderer::VideoRenderer,
 };
 use egui::{CornerRadius, Stroke};
 use livekit::{e2ee::EncryptionType, prelude::*, track::VideoQuality, SimulateScenario};
 use std::collections::HashMap;
+use verdant::services::*;
 
 pub struct LkApp {
     async_runtime: tokio::runtime::Runtime,
@@ -27,11 +26,7 @@ impl LkApp {
         let service =
             VerdantService::new(&async_runtime, true).expect("failed to create verdant service");
 
-        let discovery = service.discoveries().get(0).unwrap();
-        let room_settings = RoomSettings::from_discovery(discovery);
-        println!("room settings: {:?}", room_settings);
-
-        let page = AppPage::new(&async_runtime, cc, room_settings, service);
+        let page = AppPage::new(&async_runtime, cc, service);
 
         Self {
             async_runtime,
@@ -54,6 +49,10 @@ impl eframe::App for LkApp {
         //if let Some(event) = self.service.try_recv() {
         //    self.page.event(event);
         //}
+
+        if let Some(event) = self.page.service.try_recv() {
+            self.page.event(event);
+        }
 
         self.page.update(ctx, frame)
     }

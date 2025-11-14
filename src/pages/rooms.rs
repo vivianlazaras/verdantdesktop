@@ -4,29 +4,30 @@ use crate::{
     video_grid::VideoGrid,
     video_renderer::VideoRenderer,
 };
+use uuid::Uuid;
+
 use egui::{CornerRadius, Stroke};
 use keycast::discovery::Discovery;
 use livekit::{e2ee::EncryptionType, prelude::*, track::VideoQuality, SimulateScenario};
-use verdant::livekit::TokenResponse;
 use std::collections::HashMap;
 use tokio::runtime::Handle;
+use verdant::livekit::TokenResponse;
 
 #[derive(serde::Serialize, Debug, Clone, serde::Deserialize)]
 pub struct RoomState {
-    settings: RoomSettings,
+    room: Option<RoomSettings>,
+    settings: GeneralSettings,
     connecting: bool,
     connection_failure: Option<String>,
 }
 
 impl RoomState {
-    pub fn set_token(&mut self, token: &str) {
-        self.settings.set_token(token);
+    pub fn set_room(&mut self, room: RoomSettings) {
+        self.room = Some(room);
     }
-    pub fn set_url(&mut self, url: &str) {
-        self.settings.set_url(url);
-    }
-    pub fn new(settings: RoomSettings) -> Self {
+    pub fn new(settings: GeneralSettings) -> Self {
         Self {
+            room: None,
             settings,
             connecting: false,
             connection_failure: None,
@@ -34,11 +35,15 @@ impl RoomState {
     }
 
     pub fn url(&self) -> &str {
-        &self.settings.url()
+        &self.room().as_ref().expect("room should be initialized by now").server.url
+    }
+
+    pub fn room(&self) -> &Option<RoomSettings> {
+        &self.room
     }
 
     pub fn key(&self) -> &str {
-        &self.settings().key()
+        self.room().as_ref().map(|v| v.key()).expect("key should be initialized by this point")
     }
 
     /*pub fn key_mut(&mut self) -> &mut String {
@@ -50,10 +55,10 @@ impl RoomState {
     }*/
 
     pub fn token(&self) -> &str {
-        &self.settings().token()
+        self.room().as_ref().map(|v| &v.server.token).expect("room should be initialized by this point")
     }
 
-    pub fn settings(&self) -> &RoomSettings {
+    pub fn settings(&self) -> &GeneralSettings {
         &self.settings
     }
 }
@@ -67,13 +72,13 @@ pub struct GridRoom {
 }
 
 impl GridRoom {
-    pub fn initialize(&mut self, response: TokenResponse) {
-        self.state.set_token(&response.token);
-        self.state.set_url(&response.url);
+    pub fn initialize(&mut self, ident: &str, response: &TokenResponse) {
+        let room = RoomSettings::from_response(&self.state.settings, ident, response);
+        self.state.set_room(room);
         println!("url: {}", self.state.url());
         let cmd = AsyncCmd::RoomConnect {
             url: self.state.url().to_string(),
-            token: response.token,
+            token: response.token.clone(),
             key: self.state.key().to_string(),
             enable_e2ee: self.state.settings().enable_e2ee(),
             auto_subscribe: self.state.settings().auto_subscribe(),
@@ -86,7 +91,7 @@ impl GridRoom {
     pub fn new(
         runtime: &tokio::runtime::Runtime,
         cc: &eframe::CreationContext<'_>,
-        settings: RoomSettings,
+        settings: GeneralSettings,
     ) -> Self {
         let state = RoomState::new(settings);
         let state = cc
@@ -250,7 +255,7 @@ impl GridRoom {
         });
     }
 
-    pub fn settings(&self) -> &RoomSettings {
+    pub fn settings(&self) -> &GeneralSettings {
         self.state.settings()
     }
 

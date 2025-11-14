@@ -10,8 +10,8 @@ pub use rooms::*;
 pub use settings::*;
 
 use crate::service::{LkService, UiCmd};
-use verdant::services::{VerdantCmd, VerdantService, VerdantUiCmd};
 use tokio::sync::mpsc::UnboundedSender;
+use verdant::services::{VerdantCmd, VerdantService, VerdantUiCmd};
 
 #[derive(Serialize, Deserialize)]
 pub enum AppState {
@@ -25,6 +25,7 @@ pub enum ActivePage {
     Room,
     Account,
     Settings,
+    Discover,
 }
 
 pub struct AppPage {
@@ -33,24 +34,18 @@ pub struct AppPage {
     account: AccountPage,
     settings: SettingsPage,
     active: ActivePage,
-    service: VerdantService,
+    pub(crate) service: VerdantService,
 }
 
 impl AppPage {
     pub fn new(
         runtime: &tokio::runtime::Runtime,
         cc: &eframe::CreationContext<'_>,
-        room_settings: RoomSettings,
         service: VerdantService,
     ) -> Self {
-        let url = match service.discoveries().get(0) {
-            Some(discovery) => discovery.urls().get(0).unwrap().to_string(),
-            None => "".to_string(),
-        };
-        println!("found url: {}", url);
-        let login = LoginPage::new(runtime, cc, service.tx().clone(), &url);
+        let login = LoginPage::new(runtime, cc, service.tx().clone(), "http://localhost");
         let settings = SettingsPage::new(runtime, cc);
-        let room = GridRoom::new(runtime, cc, room_settings);
+        let room = GridRoom::new(runtime, cc, GeneralSettings::default());
         let account = AccountPage::new(runtime, cc);
         let active = ActivePage::Login;
         Self {
@@ -81,8 +76,8 @@ impl AppPage {
 
     pub fn event(&mut self, cmd: VerdantUiCmd) {
         match cmd {
-            VerdantUiCmd::LkToken(response) => {
-                self.room.initialize(response);
+            VerdantUiCmd::LkToken(url, response) => {
+                self.room.initialize(&url, &response);
                 self.active = ActivePage::Room;
             }
             _ => match self.active {
