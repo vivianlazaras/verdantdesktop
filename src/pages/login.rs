@@ -147,7 +147,11 @@ impl LoginPage {
                 if let Some(url) = discovery.default_url() {
                     let new = self.state.servers.get(&url).is_none();
                     if new {
-                        self.state.servers.insert(url, discovery);
+                        self.state.servers.insert(url.clone(), discovery);
+                        if self.state.active.is_none() {
+                            self.state.active = Some(url.clone());
+                            self.state.url = url;
+                        }
                     }
                 }else{
                     println!("no default url could be found for: {:?}", discovery);
